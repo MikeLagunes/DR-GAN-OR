@@ -13,7 +13,7 @@ class BaseModel(object):
 
 	# helper saving function that can be used by subclasses
 	def save_network(self,network, network_label, epoch_label, gpu_ids):
-		save_filename = 'net_{1}.path'.format(network_label)
+		save_filename = 'net_{}.path'.format(network_label)
 		#save_filename = '{0}_net_{1}.path'.format(epoch_label, network_label)
 		save_path = os.path.join(self.save_dir, save_filename)
 		torch.save(network.cpu().state_dict(), save_path)

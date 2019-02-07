@@ -88,6 +88,7 @@ def make_dataset2(dir):
             for fname in filenames:
                 if is_image_file(fname):
                     path = fname
+                    fname= os.path.split(fname)[1]# 
                     id = get_id(path)
                     pose = get_pose(path)
                     images.append({'path': path,
@@ -202,8 +203,11 @@ def get_id(path):
     if "core50" in path:
         lbl = int(path[-10:-8])-1
 
+    elif "tudlight" in path:
+        lbl =int(path[-18:-16]) - 1
+
     elif "6D_obj" in path:
-        lbl =int(path[-17:-15]) - 1
+        lbl =int(path[-17:-15]) - 1 
 
     elif "tless" in path:
         lbl = int(path[-11:-9]) - 1
