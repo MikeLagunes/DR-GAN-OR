@@ -132,7 +132,6 @@ class Tejani(data.Dataset):
 
         return {'image': img,
                 'identity': identity,
-                'pose': pose,
                 'name': name}
 
     def __getitem__(self, idx):
