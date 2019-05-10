@@ -404,7 +404,8 @@ class Generator(nn.Module):
         if single:
             self.enc = Encoder(Bottleneck, [3, 4, 6, 3], num_classes=1000)
             self.enc.load_state_dict(weights)
-            self.enc = nn.Linear(2048, 320)
+            self.enc = nn.Linear(96, 320)
+            #self.enc = nn.Linear(2048, 320)
         else:
             self.enc = Multi_Encoder()
 
