@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.nn.init as init
 from torchvision import transforms
+import torch.utils.model_zoo as model_zoo
 
 model_urls = {'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth'}
 weights = model_zoo.load_url(model_urls['resnet50'])
