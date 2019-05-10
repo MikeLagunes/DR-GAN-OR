@@ -30,7 +30,7 @@ class Single_DRGAN(BaseModel):
         self.is_Train = opt.is_Train
 
         self.G = Generator(N_z=opt.N_z, single=True)
-        self.D = Discriminator(N_d=opt.N_d)
+        self.D = Discriminator()
         if self.is_Train:
             self.optimizer_G = optim.Adam(self.G.parameters(), lr=opt.lr_G, betas=(opt.beta1, opt.beta2))
             self.optimizer_D = optim.Adam(self.D.parameters(), lr=opt.lr_D, betas=(opt.beta1, opt.beta2))
