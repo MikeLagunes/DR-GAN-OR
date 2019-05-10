@@ -40,7 +40,7 @@ class Single_DRGAN(BaseModel):
 
         self.N_z = opt.N_z
         self.N_p = 1
-        self.N_d = opt.N_d
+        self.N_d = opt.num_classes #N_d
 
     def init_weights(self):
         self.G.apply(weights_init_normal)
