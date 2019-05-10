@@ -6,6 +6,7 @@ import torch.nn.init as init
 from torchvision import transforms
 
 model_urls = {'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth'}
+weights = model_zoo.load_url(model_urls['resnet50'])
 
 def conv3x3(in_planes, out_planes, stride=1):
     """3x3 convolution with padding"""
