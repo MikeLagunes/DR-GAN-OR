@@ -5,6 +5,85 @@ import torch.nn.functional as F
 import torch.nn.init as init
 from torchvision import transforms
 
+model_urls = {'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth'}
+
+def conv3x3(in_planes, out_planes, stride=1):
+    """3x3 convolution with padding"""
+    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
+                     padding=1, bias=False)
+
+
+class BasicBlock(nn.Module):
+    expansion = 1
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None):
+        super(BasicBlock, self).__init__()
+        self.conv1 = conv3x3(inplanes, planes, stride)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv2 = conv3x3(planes, planes)
+        self.bn2 = nn.BatchNorm2d(planes)
+        self.downsample = downsample
+        self.stride = stride
+
+    def forward(self, x):
+        residual = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+
+        if self.downsample is not None:
+            residual = self.downsample(x)
+
+        out += residual
+        out = self.relu(out)
+
+        return out
+
+
+class Bottleneck(nn.Module):
+    expansion = 4
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None):
+        super(Bottleneck, self).__init__()
+        self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,
+                               padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(planes)
+        self.conv3 = nn.Conv2d(planes, planes * self.expansion, kernel_size=1, bias=False)
+        self.bn3 = nn.BatchNorm2d(planes * self.expansion)
+        self.relu = nn.ReLU(inplace=True)
+        self.downsample = downsample
+        self.stride = stride
+
+    def forward(self, x):
+        residual = x
+
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+
+        out = self.conv2(out)
+        out = self.bn2(out)
+        out = self.relu(out)
+
+        out = self.conv3(out)
+        out = self.bn3(out)
+
+        if self.downsample is not None:
+            residual = self.downsample(x)
+
+        out += residual
+        out = self.relu(out)
+
+        return out
+
+
 def Tensor2Image(img):
     """
     input (FloatTensor)
@@ -117,7 +196,6 @@ class Fconv_unit(nn.Module):
 class Decoder(nn.Module):
     """
     Args:
-        N_p (int): The sum of the poses
         N_z (int): The dimensions of the noise
 
     >>> Dec = Decoder()
@@ -126,7 +204,7 @@ class Decoder(nn.Module):
     >>> output.size()
     torch.Size([4, 3, 96, 96])
     """
-    def __init__(self, N_p=2, N_z=50):
+    def __init__(self, N_z=50):
         super(Decoder, self).__init__()
         Fconv_layers = [
             Fconv_unit(320, 160),                   #Bx160x6x6
@@ -146,7 +224,7 @@ class Decoder(nn.Module):
         ]
 
         self.Fconv_layers = nn.Sequential(*Fconv_layers)
-        self.fc = nn.Linear(320+N_p+N_z, 320*6*6)
+        self.fc = nn.Linear(320+N_z, 320*6*6)
 
     def forward(self, input):
         x = self.fc(input)
@@ -199,7 +277,77 @@ class Multi_Encoder(nn.Module):
 
         return torch.cat((t,r.type_as(t)), 0)
 
+
 class Encoder(nn.Module):
+    """
+    Encoder with ResNet-50.
+
+    >>> Enc = Encoder()
+    >>> input = Variable(torch.randn(4, 3, 96, 96))
+    >>> output = Enc(input)
+    >>> output.size()
+    torch.Size([4, 320])
+    """
+    def __init__(self, block, layers, num_classes=1000):
+        self.inplanes = 64
+        super(Encoder, self).__init__()
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
+                               bias=False)
+        self.bn1 = nn.BatchNorm2d(64)
+        self.relu = nn.ReLU(inplace=True)
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        self.layer1 = self._make_layer(block, 64, layers[0])
+        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
+        self.layer3 = self._make_layer(block, 256, layers[2], stride=2)
+        self.layer4 = self._make_layer(block, 512, layers[3], stride=2)
+        self.avgpool = nn.AvgPool2d(7, stride=1)
+        self.fc = nn.Linear(512 * block.expansion, 1000)
+
+
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+
+    def _make_layer(self, block, planes, blocks, stride=1):
+        downsample = None
+        if stride != 1 or self.inplanes != planes * block.expansion:
+            downsample = nn.Sequential(
+                nn.Conv2d(self.inplanes, planes * block.expansion,
+                          kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(planes * block.expansion),
+            )
+
+        layers = []
+        layers.append(block(self.inplanes, planes, stride, downsample))
+        self.inplanes = planes * block.expansion
+        for i in range(1, blocks):
+            layers.append(block(self.inplanes, planes))
+
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+
+        x = self.avgpool(x)
+        x = x.view(x.size(0), -1)
+        x_bottleneck = self.fc(x)
+
+        return x_bottleneck # Returns an embedding of 320 elements
+
+
+
+class Encoder_old(nn.Module):
     """
     The single version of the Encoder.
 
@@ -234,7 +382,7 @@ class Encoder(nn.Module):
     def forward(self, input):
         x = self.conv_layers(input)
         x = x.view(-1, 320)
-        return x
+        return 
 
 
 class Generator(nn.Module):
@@ -249,18 +397,22 @@ class Generator(nn.Module):
     >>> output.size()
     torch.Size([4, 3, 96, 96])
     """
-    def __init__(self, N_p=2, N_z=50, single=False):
+    def __init__(self, N_z=50, single=False):
         super(Generator, self).__init__()
         if single:
-            self.enc = Encoder()
+            self.enc = Encoder(Bottleneck, [3, 4, 6, 3], num_classes=1000, **kwargs)
+            self.enc.load_state_dict(weights)
+            self.enc = nn.Linear(2048, 320)
         else:
             self.enc = Multi_Encoder()
-        self.dec = Decoder(N_p, N_z)
 
-    def forward(self, input, pose, noise):
+        self.dec = Decoder(N_z)
+
+
+    def forward(self, input, noise):
         x = self.enc(input)
         #print('{0}/t{1}/t{2}'.format(x.size(), pose.size(), noise.size()))
-        x = torch.cat((x, pose, noise), 1)
+        x = torch.cat((x, noise), 1)
         x = self.dec(x)
         return x
 
@@ -276,7 +428,7 @@ class Discriminator(nn.Module):
     >>> output.size()
     torch.Size([4, 503])
     """
-    def __init__(self, N_p=2, N_d=500):
+    def __init__(self, n_classes=10):
         super(Discriminator, self).__init__()
         conv_layers = [
             conv_unit(3, 32),                   #Bx32x96x96
@@ -297,10 +449,12 @@ class Discriminator(nn.Module):
         ]
 
         self.conv_layers = nn.Sequential(*conv_layers)
-        self.fc = nn.Linear(320, N_d+N_p+1)
+        self.fc_embedding = nn.Linear(320, 128)
+        self.fc = nn.Linear(128, n_classes)
 
     def forward(self,input):
         x = self.conv_layers(input)
         x = x.view(-1, 320)
+        x = self.fc_embedding(x)
         x = self.fc(x)
         return x
