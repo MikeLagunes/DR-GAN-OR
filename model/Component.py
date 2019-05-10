@@ -349,44 +349,21 @@ class Encoder(nn.Module):
         return x_bottleneck # Returns an embedding of 320 elements
 
 
-
-class Encoder_old(nn.Module):
+def cnn_resnet50(pretrained=False,  num_classes=1000, **kwargs):
+    """Constructs a ResNet-50 model.
+    Args:
+        pretrained (bool): If True, returns a model pre-trained on ImageNet
     """
-    The single version of the Encoder.
+    model = cnn_resnet(Bottleneck, [3, 4, 6, 3], num_classes=1000, **kwargs)
 
-    >>> Enc = Encoder()
-    >>> input = Variable(torch.randn(4, 3, 96, 96))
-    >>> output = Enc(input)
-    >>> output.size()
-    torch.Size([4, 320])
-    """
-    def __init__(self):
-        super(Encoder, self).__init__()
-        conv_layers = [
-            conv_unit(3, 32),                   #Bx32x96x96
-            conv_unit(32, 64),                  #Bx64x96x96
-            conv_unit(64, 64, pooling=True),    #Bx64x48x48
-            conv_unit(64, 64),                  #Bx64x48x48
-            conv_unit(64, 128),                 #Bx128x48x48
-            conv_unit(128, 128, pooling=True),  #Bx128x24x24
-            conv_unit(128, 96),                 #Bx96x24x24
-            conv_unit(96, 192),                 #Bx192x24x24
-            conv_unit(192, 192, pooling=True),  #Bx192x12x12
-            conv_unit(192, 128),                #Bx128x12x12
-            conv_unit(128, 256),                #Bx256x12x12
-            conv_unit(256, 256, pooling=True),  #Bx256x6x6
-            conv_unit(256, 160),                #Bx160x6x6
-            conv_unit(160, 320),                #Bx320x6x6
-            nn.AvgPool2d(kernel_size=6)         #Bx320x1x1
-        ]
+    weights = model_zoo.load_url(model_urls['resnet50'])
 
-        self.conv_layers = nn.Sequential(*conv_layers)
+    if pretrained:
+        model.load_state_dict(weights)
 
-    def forward(self, input):
-        x = self.conv_layers(input)
-        x = x.view(-1, 320)
-        return 
+    model.fc = nn.Linear(2048, num_classes)
 
+return model
 
 class Generator(nn.Module):
     """
@@ -403,10 +380,12 @@ class Generator(nn.Module):
     def __init__(self, N_z=50, single=False):
         super(Generator, self).__init__()
         if single:
-            self.enc = Encoder(Bottleneck, [3, 4, 6, 3], num_classes=1000)
-            self.enc.load_state_dict(weights)
-            self.enc = nn.Linear(96, 320)
-            #self.enc = nn.Linear(2048, 320)
+            model = Encoder(Bottleneck, [3, 4, 6, 3], num_classes=1000, **kwargs)
+            weights = model_zoo.load_url(model_urls['resnet50'])
+            model.load_state_dict(weights)
+            model.fc = nn.Linear(96, 320)
+            
+            self.enc = model
         else:
             self.enc = Multi_Encoder()
 
