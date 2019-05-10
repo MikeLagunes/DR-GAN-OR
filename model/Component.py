@@ -349,22 +349,6 @@ class Encoder(nn.Module):
         return x_bottleneck # Returns an embedding of 320 elements
 
 
-def cnn_resnet50(pretrained=False,  num_classes=1000, **kwargs):
-    """Constructs a ResNet-50 model.
-    Args:
-        pretrained (bool): If True, returns a model pre-trained on ImageNet
-    """
-    model = cnn_resnet(Bottleneck, [3, 4, 6, 3], num_classes=1000, **kwargs)
-
-    weights = model_zoo.load_url(model_urls['resnet50'])
-
-    if pretrained:
-        model.load_state_dict(weights)
-
-    model.fc = nn.Linear(2048, num_classes)
-
-return model
-
 class Generator(nn.Module):
     """
     >>> G = Generator()
@@ -384,7 +368,7 @@ class Generator(nn.Module):
             weights = model_zoo.load_url(model_urls['resnet50'])
             model.load_state_dict(weights)
             model.fc = nn.Linear(96, 320)
-            
+
             self.enc = model
         else:
             self.enc = Multi_Encoder()
