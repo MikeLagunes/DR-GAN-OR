@@ -104,7 +104,7 @@ class Single_DRGAN(BaseModel):
     def forward(self, input):
         self.set_input(input)
 
-        self.syn_image = self.G(self.image, self.input_pose, self.noise)
+        self.syn_image = self.G(self.image, self.noise)
         self.syn = self.D(self.syn_image)
         self.syn_identity = self.syn[:, :self.N_d+1]
         self.syn_pose = self.syn[:, self.N_d+1:]
