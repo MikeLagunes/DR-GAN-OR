@@ -53,7 +53,7 @@ class Single_DRGAN(BaseModel):
         self.name = []
         for i in range(len(input['pose'])):
             self.image.append(input['image'][i])
-            self.pose.append(input['pose'][i])
+            self.pose.append(1)
             self.identity.append(input['identity'][i])
             self.name.append(input['name'][i])
 
