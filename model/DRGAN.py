@@ -39,7 +39,7 @@ class Single_DRGAN(BaseModel):
             self.w_L1 = opt.w_L1
 
         self.N_z = opt.N_z
-        self.N_p = opt.N_p
+        self.N_p = 1
         self.N_d = opt.N_d
 
     def init_weights(self):
