@@ -35,7 +35,7 @@ class Single_DRGAN(BaseModel):
             self.optimizer_G = optim.Adam(self.G.parameters(), lr=opt.lr_G, betas=(opt.beta1, opt.beta2))
             self.optimizer_D = optim.Adam(self.D.parameters(), lr=opt.lr_D, betas=(opt.beta1, opt.beta2))
             self.criterion = nn.CrossEntropyLoss()
-            self.L1_criterion = nn.L1Loss()
+            self.L1_criterion = nn.MSELoss() #nn.L1Loss()
             self.w_L1 = opt.w_L1
 
         self.N_z = opt.N_z
@@ -43,7 +43,7 @@ class Single_DRGAN(BaseModel):
         self.N_d = opt.num_classes #N_d
 
     def init_weights(self):
-        self.G.apply(weights_init_normal)
+        #self.G.apply(weights_init_normal)
         self.D.apply(weights_init_normal)
 
     def load_input(self, input):
@@ -69,7 +69,7 @@ class Single_DRGAN(BaseModel):
         test_pose (B): used for the test='initial learning rate
         """
         self.load_input(input)
-        self.image = torch.squeeze(torch.stack(self.image, dim = 0))
+        rain.pyself.image = torch.squeeze(torch.stack(self.image, dim = 0))
         self.batchsize = len(self.pose)
         self.pose = torch.LongTensor(self.pose)
         self.frontal_pose = torch.LongTensor(np.random.randint(self.N_p, size = self.batchsize))
@@ -105,6 +105,8 @@ class Single_DRGAN(BaseModel):
         self.set_input(input)
 
         self.syn_image = self.G(self.image, self.noise)
+        #print(self.syn_image)
+        #print(self.image) 
         self.syn = self.D(self.syn_image)
         self.syn_identity = self.syn[:, :self.N_d+1]
         self.syn_pose = self.syn[:, self.N_d+1:]
@@ -116,7 +118,14 @@ class Single_DRGAN(BaseModel):
     def backward_G(self):
         self.Loss_G_syn_identity = self.criterion(self.syn_identity, self.identity)
         #self.Loss_G_syn_pose = self.criterion(self.syn_pose, self.frontal_pose)
-        self.L1_Loss = self.L1_criterion(self.syn_image, self.image)
+
+        print(self.syn_image.shape, self.image.shape)
+        #print(torch.isnan(self.syn_image))
+        #print(torch.isnan(self.image))
+        #print(self.syn_image)
+        #print(self.syn_image == float('inf'))
+
+        self.L1_Loss = self.L1_criterion(self.image, self.image)
 
         self.Loss_G = self.Loss_G_syn_identity + self.w_L1 * self.L1_Loss #+ self.Loss_G_syn_pose
         self.Loss_G.backward(retain_graph=True)

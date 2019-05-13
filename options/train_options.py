@@ -6,7 +6,7 @@ class TrainOptions(BaseOptions):
     def initialize(self):
         BaseOptions.initialize(self)
         self.is_Train = True
-        self.parser.add_argument('--batchsize', type=int, default=64, help='input batch size')
+        self.parser.add_argument('--batchsize', type=int, default=32, help='input batch size')
         self.parser.add_argument('--lr_G', type=float, default=0.0002, help='initial learning rate of Generator')
         self.parser.add_argument('--lr_D', type=float, default=0.0002, help='initial learning rate of Discriminator')
         self.parser.add_argument('--count_epoch', type=int, default=0, help='the starting count epoch count')
