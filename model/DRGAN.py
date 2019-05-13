@@ -29,21 +29,21 @@ class Single_DRGAN(BaseModel):
         BaseModel.initialize(self, opt)
         self.is_Train = opt.is_Train
 
-        self.G = Generator(N_z=opt.N_z, single=True)
-        self.D = Discriminator()
+        self.G = Generator(N_p=opt.N_p, N_z=opt.N_z, single=True)
+        self.D = Discriminator(N_p=opt.N_p, N_d=opt.N_d)
         if self.is_Train:
             self.optimizer_G = optim.Adam(self.G.parameters(), lr=opt.lr_G, betas=(opt.beta1, opt.beta2))
             self.optimizer_D = optim.Adam(self.D.parameters(), lr=opt.lr_D, betas=(opt.beta1, opt.beta2))
             self.criterion = nn.CrossEntropyLoss()
-            self.L1_criterion = nn.MSELoss() #nn.L1Loss()
+            self.L1_criterion = nn.L1Loss()
             self.w_L1 = opt.w_L1
 
         self.N_z = opt.N_z
-        self.N_p = 1
-        self.N_d = opt.num_classes #N_d
+        self.N_p = opt.N_p
+        self.N_d = opt.N_d
 
     def init_weights(self):
-        #self.G.apply(weights_init_normal)
+        self.G.apply(weights_init_normal)
         self.D.apply(weights_init_normal)
 
     def load_input(self, input):
@@ -51,9 +51,9 @@ class Single_DRGAN(BaseModel):
         self.pose = []
         self.identity = []
         self.name = []
-        for i in range(len(input['identity'])):
+        for i in range(len(input['pose'])):
             self.image.append(input['image'][i])
-            self.pose.append(1)
+            self.pose.append(input['pose'][i])
             self.identity.append(input['identity'][i])
             self.name.append(input['name'][i])
 
@@ -69,7 +69,7 @@ class Single_DRGAN(BaseModel):
         test_pose (B): used for the test='initial learning rate
         """
         self.load_input(input)
-        rain.pyself.image = torch.squeeze(torch.stack(self.image, dim = 0))
+        self.image = torch.squeeze(torch.stack(self.image, dim = 0))
         self.batchsize = len(self.pose)
         self.pose = torch.LongTensor(self.pose)
         self.frontal_pose = torch.LongTensor(np.random.randint(self.N_p, size = self.batchsize))
@@ -104,9 +104,7 @@ class Single_DRGAN(BaseModel):
     def forward(self, input):
         self.set_input(input)
 
-        self.syn_image = self.G(self.image, self.noise)
-        #print(self.syn_image)
-        #print(self.image) 
+        self.syn_image = self.G(self.image, self.input_pose, self.noise)
         self.syn = self.D(self.syn_image)
         self.syn_identity = self.syn[:, :self.N_d+1]
         self.syn_pose = self.syn[:, self.N_d+1:]
@@ -118,14 +116,7 @@ class Single_DRGAN(BaseModel):
     def backward_G(self):
         self.Loss_G_syn_identity = self.criterion(self.syn_identity, self.identity)
         #self.Loss_G_syn_pose = self.criterion(self.syn_pose, self.frontal_pose)
-
-        print(self.syn_image.shape, self.image.shape)
-        #print(torch.isnan(self.syn_image))
-        #print(torch.isnan(self.image))
-        #print(self.syn_image)
-        #print(self.syn_image == float('inf'))
-
-        self.L1_Loss = self.L1_criterion(self.image, self.image)
+        self.L1_Loss = self.L1_criterion(self.syn_image, self.image)
 
         self.Loss_G = self.Loss_G_syn_identity + self.w_L1 * self.L1_Loss #+ self.Loss_G_syn_pose
         self.Loss_G.backward(retain_graph=True)

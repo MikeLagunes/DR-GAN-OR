@@ -9,14 +9,14 @@ checkpoints = os.path.join(checkpoints, now)
 result = './result'
 result = os.path.join(result, now)
 
-datasets = {'hinterstoisser': '/mnt/storage/home/ml15765/scratch/datasets/6D_obj_rec/hinterstoisser',
+datasets = {'hinterstoisser': '/media/alexa/DATA/Datasets/6D_obj_rec/hinterstoisser',
             'tejani': '/mnt/storage/home/ml15765/scratch/datasets/6D_obj_rec/tejani',
             'tudlight': '/mnt/storage/home/ml15765/scratch/datasets/6D_obj_rec/tudlight',
             'rutgers_apc': '/mnt/storage/home/ml15765/scratch/datasets/6D_obj_rec/rutgers-apc',
             'toyotalight': '/mnt/storage/home/ml15765/scratch/datasets/6D_obj_rec/toyotalight',
-            'tless': '/mnt/storage/home/ml15765/scratch/datasets/tless',
-            'core50': '/mnt/storage/home/ml15765/scratch/datasets/core50',
-            'toybox': '/mnt/storage/home/ml15765/scratch/datasets/toybox'}
+            'tless': '/media/alexa/DATA/Datasets/tless',
+            'core50': '/media/alexa/DATA/Datasets/core50',
+            'toybox': '/media/alexa/DATA/Datasets/toybox'}
 
 class BaseOptions(object):
     def __init__(self):
@@ -25,7 +25,8 @@ class BaseOptions(object):
 
     def initialize(self):
 
-        self.parser.add_argument('--dataroot', default=datasets['core50'], help='path to images (should have subfolder train and test)')
+        #self.parser.add_argument('--dataroot', default='cfp-dataset/Data/Images', help='path to images (should have subfolder train and test)')
+        self.parser.add_argument('--dataroot', default=datasets['toybox'], help='path to images (should have subfolder train and test)')
         self.parser.add_argument('--input_nc', type=int, default=3, help='# of input image channels')
         self.parser.add_argument('--output_nc', type=int, default=3, help='# of output image channels')
 
@@ -35,7 +36,8 @@ class BaseOptions(object):
         self.parser.add_argument('--test_dir', type=str, default=result, help='the dir to save the result')
 
         self.parser.add_argument('--model', type=str, default='single', help='single/multi')
-        self.parser.add_argument('--num_classes', type=int, default=50, help='number of classes on the dataset')
+        self.parser.add_argument('--N_p', type=int, default=2, help='the sum of the poses')
+        self.parser.add_argument('--N_d', type=int, default=450, help='the sum of the identities')
         self.parser.add_argument('--N_z', type=int, default=50, help='the sum of the noise')
 
         self.parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')

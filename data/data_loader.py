@@ -2,7 +2,7 @@ import collections
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import default_collate
 from torchvision import transforms
-#from dataset import FDDataset
+from dataset import FDDataset
 from dataset import Tejani
 from dataset import Core50
 
@@ -18,8 +18,7 @@ def CreateDataLoader(opt):
         transforms.RandomCrop(96),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
-     
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))
     ])
 
     single = True if opt.model=='single' else False
